@@ -1,15 +1,19 @@
+#!/usr/bin/env/python3
 import csv
 import requests
 import datetime
 
+# Download data from radioID.net and save to CSV
 r = requests.get('https://radioid.net/static/user.csv', allow_redirects=True)
 with open('users.csv', 'wb') as f:
     f.write(r.content)
 
+# Open downloaded data from csv and make list
 with open('users.csv', newline='', encoding='utf-8') as csvfile:
     data = list(csv.DictReader(csvfile, delimiter=","))
 
-l = 0
+
+# Rebuild data to Anytone format, remove polish letters
 for r in data:
     r['FIRST_NAME'] = r['FIRST_NAME'].replace('ą', 'a').replace('ć', 'c').replace('ę', 'e').replace('ł', 'l').replace(
         'ń', 'n').replace('ó', 'o').replace('ś', 's').replace('ź', 'z').replace('ż', 'z').replace('Ą', 'A').replace('Ć',
@@ -41,6 +45,7 @@ for r in data:
 
 
 i = 1
+# write data to csv file, which can be imported to Anytone
 with open('out_data_{}.csv'.format(datetime.datetime.now().timestamp()), 'w', newline='', encoding='utf-8') as csvfile:
     writer = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_ALL)
