@@ -3,6 +3,7 @@ import csv
 import requests
 import datetime
 
+
 # Download data from radioID.net and save to CSV
 r = requests.get('https://radioid.net/static/user.csv', allow_redirects=True)
 with open('users.csv', 'wb') as f:
