@@ -9,3 +9,11 @@ Anytone AT-D878 ContactList_
 For polish users only.
 Zdarzyło mi się nawiązać łączności z nielicencjonowanymi krótkofalowcami, postanowiłem zrobić skrypt, który szybko sprawdzi ważność licencji. 
 Skrypt sprawdza czy znak wywołąwczy znajduje się w udzielonych przez UKE licencjach.
+
+### pota.py:
+Download POTA reference list from POTA website and return list of python dictionary.
+Pandas library required.
+
+### wiresx_active_nodes.py:
+Download active nodes list from YAESU website. Print list of dictionary for polish nodes.
+Pandas library required.
