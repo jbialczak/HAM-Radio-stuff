@@ -11,6 +11,12 @@ import unidecode
 import roman
 
 
+# Ostrzeżenia meteo:
+# https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/osmet-teryt?lc=
+
+# Komunikaty meteorologiczne
+# https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/komet-teryt?lc=
+
 class E_Wojewodztwa(Enum):
     DS = "dolnośląskie"
     KP = "kujawsko-pomorskie"
@@ -329,13 +335,75 @@ class Imgw:
         return json_object
 
 
+def teryt_osmet(terytCode: str):
+    # Read current json file
+    with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
+        json_object = json.load(openfile)
+        json_object['warnings'].clear()
+
+    # Ostrzeżenia meteorologiczne
+    r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/osmet-teryt?lc=')
+    d = r.json()
+    osmet_list = None
+    if terytCode in d['teryt'] and 'warnings' in d:
+        osmet_list = d['teryt'][terytCode]
+    if osmet_list is not None:
+        if type(osmet_list) == list:
+            for r in osmet_list:
+                if r in d['warnings']:
+                    d['warnings'][r]['WarningNumber'] = r
+                    json_object['warnings'].append(d['warnings'][r])
+
+        # Remove expired warnings
+        format = '%Y-%m-%d %H:%M'
+        for r in json_object['warnings'][:]:
+            if datetime.strptime(r['ValidTo'], format) < datetime.now():
+                json_object['warnings'].remove(r)
+
+    # Komunikaty meteorologiczne
+    r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/komet-teryt?lc=')
+    d = r.json()
+    komet_list = None
+    if terytCode in d['teryt'] and 'komets' in d:
+        komet_list = d['teryt'][terytCode]
+    if komet_list is not None:
+        if type(komet_list) == list:
+            for r in komet_list:
+                if r in d['komets']:
+                    d['komets'][r]['WarningNumber'] = r
+                    json_object['komets'].append(d['komets'][r])
+
+        # Remove expired warnings
+        format = '%Y-%m-%d %H:%M'
+        for r in json_object['komets'][:]:
+            if datetime.strptime(r['ValidTo'], format) < datetime.now():
+                json_object['komets'].remove(r)
+
+    # Save result json file
+    with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
+        json.dump(json_object, outfile, indent=4, ensure_ascii=False)
+
+    # Return data
+    return json_object
+
+
+def teryt_komet(terytCode: str):
+    # Read current json file
+    with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
+        json_object = json.load(openfile)
+        json_object['komets'].clear()
+    r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/komet-teryt?lc=')
+    d = r.json()
+    if 'komets' not in d:
+        return json_object
+        
 def makeAPRSStatus(warnings):
     """
     Metoda wystawia dane do wysłania statusu APRS
     :param warnings: Słownik z danymi o ostrzeżeniach
     """
     msg = None
-    format = '%Y-%m-%d %H:%M:%S'
+    format = '%Y-%m-%d %H:%M'
     lastalarm = warnings['LastAlarm']
     locale.setlocale(locale.LC_ALL, '')
     if len(warnings['warnings']) > 0:
@@ -348,13 +416,13 @@ def makeAPRSStatus(warnings):
                 okres = '{}.{} {}:{} - {}.{} {}:{}'.format(dt_from.day, roman.toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.day, roman.toRoman(dt.month), dt.hour, dt.strftime("%M"))
             if len(warnings['warnings']) > 1:
                 if r['WarningNumber'] != lastalarm and dt > datetime.now():
-                    msg = '{} {}'.format(r['Polish']['PhenomenonName'], okres)
+                    msg = '{} {}'.format(r['PhenomenonName'], okres)
                     msg = '>UWAGA: {}'.format(msg)
                     lastalarm = r['WarningNumber']
                     break
             else:
                 if dt > datetime.now():
-                    msg = '{} {}'.format(r['Polish']['PhenomenonName'], okres)
+                    msg = '{} {}'.format(r['PhenomenonName'], okres)
                     msg = '>UWAGA: {}'.format(msg)
                     lastalarm = r['WarningNumber']
                     break
@@ -372,10 +440,16 @@ def makeAPRSStatus(warnings):
 
 if not os.path.exists("meteowarnings.json"):
     with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
-        json.dump({'LastAlarm': None, 'warnings': []}, outfile, indent=4, ensure_ascii=False)
+        json.dump({'LastAlarm': None, 'warnings': [], }, outfile, indent=4, ensure_ascii=False)
 
 
+# Stara metoda pobierania ostrzeżeń meteorologicznych        
 # Odkomentuj to co poniżej, i skonfiguruj odpowiednie województwo i TerytCode
-api = Imgw(E_Wojewodztwa.MZ.name)   # Kod województwa (z Enum lub po prostu 'MZ' dla mazowieckiego)
-data = api.wrn('1405')              # Kod powiatu (kod powiatu musi przynależeć do podanego województwa)
+# api = Imgw(E_Wojewodztwa.MZ.name)   # Kod województwa (z Enum lub po prostu 'MZ' dla mazowieckiego)
+# data = api.wrn('1405')              # Kod powiatu (kod powiatu musi przynależeć do podanego województwa)
+# makeAPRSStatus(data)
+
+
+# Nowa metoda pobierania ostrzeżeń meteorologicznych
+data = teryt_osmet('1405')
 makeAPRSStatus(data)
