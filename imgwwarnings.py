@@ -7,8 +7,8 @@ from datetime import datetime, timedelta, timezone
 import json
 from enum import Enum
 import locale
-import unidecode
-import roman
+from unidecode import unidecode
+from roman import toRoman
 
 
 # Ostrzeżenia meteorologiczne:
@@ -423,9 +423,9 @@ def makeAPRSStatus(warnings):
             dt = datetime.strptime(r['ValidTo'], format)
             dt_from = datetime.strptime(r['ValidFrom'], format)
             if dt.day == dt_from.day and dt.month == dt_from.month:
-                okres = '{}.{} {}:{}-{}:{}'.format(dt_from.day, roman.toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.hour, dt.strftime("%M"))
+                okres = '{}.{} {}:{}-{}:{}'.format(dt_from.day, toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.hour, dt.strftime("%M"))
             else:
-                okres = '{}.{} {}:{} - {}.{} {}:{}'.format(dt_from.day, roman.toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.day, roman.toRoman(dt.month), dt.hour, dt.strftime("%M"))
+                okres = '{}.{} {}:{} - {}.{} {}:{}'.format(dt_from.day, toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.day, toRoman(dt.month), dt.hour, dt.strftime("%M"))
             if len(warnings['warnings']) > 1:
                 if (r['index'] > int(lastalarm) or lastalarm is None) and dt > datetime.now() > dt_from - timedelta(hours=2):
                     msg = '{} {}'.format(r['PhenomenonName'], okres)
@@ -448,7 +448,7 @@ def makeAPRSStatus(warnings):
     with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
         json.dump(warnings, outfile, indent=4, ensure_ascii=False)
     if msg is not None:
-        print(unidecode.unidecode(msg))
+        print(unidecode(msg))
     else:
         exit()
 
