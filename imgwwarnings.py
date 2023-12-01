@@ -2,7 +2,7 @@
 import os
 import requests
 # from bs4 import BeautifulSoup
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 # import xmltodict
 import json
 from enum import Enum
@@ -11,7 +11,7 @@ import unidecode
 import roman
 
 
-# Ostrzeżenia meteo:
+# Ostrzeżenia meteorologiczne:
 # https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/osmet-teryt?lc=
 
 # Komunikaty meteorologiczne
@@ -209,7 +209,7 @@ class E_Wojewodztwa(Enum):
     # 2478: "ZABRZE",
     # 2479: "ŻORY",
 
-
+# Klasa Imgw przestarzała
 # class Imgw:
 #     def __init__(self, woj):
 #         self.woj = woj
@@ -343,13 +343,21 @@ warning_levels = [
 ]
 
 
-def teryt_osmet(terytCode: str):
+def take_data_for_terytCode(terytCode: str):
+    """
+    Metoda pobiera dane dotyczące ostrzeżeń i komunikatów meteo
+    z serwera IMGW i generuje słownik z danymi, które zapisuje do pliku meteowarnings.json
+    :param terytCode: Kod terytorium
+    :return: dict
+    """
+    format = '%Y-%m-%d %H:%M'
     # Read current json file
     with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
         json_object = json.load(openfile)
         json_object['warnings'].clear()
         json_object['komets'].clear()
     i = 0
+
     # Ostrzeżenia meteorologiczne
     r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/osmet-teryt?lc=')
     d = r.json()
@@ -366,11 +374,10 @@ def teryt_osmet(terytCode: str):
                     i += 1
                     json_object['warnings'].append(d['warnings'][r])
 
-        # # Remove expired warnings
-        # format = '%Y-%m-%d %H:%M'
-        # for r in json_object['warnings'][:]:
-        #     if datetime.strptime(r['ValidTo'], format) < datetime.now():
-        #         json_object['warnings'].remove(r)
+        # Remove expired warnings
+        for r in json_object['warnings'][:]:
+            if datetime.strptime(r['ValidTo'], format) < datetime.now():
+                json_object['warnings'].remove(r)
 
     # Komunikaty meteorologiczne
     r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/komet-teryt?lc=')
@@ -390,7 +397,6 @@ def teryt_osmet(terytCode: str):
                     json_object['warnings'].append(d['komets'][r])
 
         # Remove expired warnings
-        format = '%Y-%m-%d %H:%M'
         for r in json_object['komets'][:]:
             if datetime.strptime(r['ValidTo'], format) < datetime.now():
                 json_object['komets'].remove(r)
@@ -410,7 +416,7 @@ def makeAPRSStatus(warnings):
     """
     msg = None
     format = '%Y-%m-%d %H:%M'
-    lastalarm = warnings['LastAlarm']
+    lastalarm = warnings['LastAlarm'] if warnings['LastAlarm'] is not None else -1
     locale.setlocale(locale.LC_ALL, '')
     if len(warnings['warnings']) > 0:
         for r in warnings['warnings']:
@@ -421,8 +427,7 @@ def makeAPRSStatus(warnings):
             else:
                 okres = '{}.{} {}:{} - {}.{} {}:{}'.format(dt_from.day, roman.toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.day, roman.toRoman(dt.month), dt.hour, dt.strftime("%M"))
             if len(warnings['warnings']) > 1:
-                if lastalarm is None: lastalarm = -1
-                if (r['index'] > int(lastalarm) or lastalarm is None) and dt > datetime.now() > dt_from:
+                if (r['index'] > int(lastalarm) or lastalarm is None) and dt > datetime.now() > dt_from - timedelta(hours=2):
                     msg = '{} {}'.format(r['PhenomenonName'], okres)
                     if r['type'] == 'WARNING':
                         msg = '>{} {}'.format(warning_levels[int(r['Level'])], msg)
@@ -431,13 +436,13 @@ def makeAPRSStatus(warnings):
                     lastalarm = r['index']
                     break
             else:
-                if dt > datetime.now() > dt_from:
+                if dt > datetime.now() > dt_from - timedelta(hours=2):
                     msg = '{} {}'.format(r['PhenomenonName'], okres)
                     msg = '>{} {}'.format(warning_levels[int(r['Level'])], msg)
                     lastalarm = r['index']
                     break
         warnings['LastAlarm'] = lastalarm if len(warnings) - 1 >= lastalarm else None
-    elif lastalarm is not None:
+    elif lastalarm >= 0:
         msg = '>'
         warnings['LastAlarm'] = None
     with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
@@ -461,5 +466,5 @@ if not os.path.exists("meteowarnings.json"):
 
 
 # Nowa metoda pobierania ostrzeżeń meteorologicznych
-data = teryt_osmet('1405')
+data = take_data_for_terytCode('1405')  # Podaj terytCode dla Twojej lokalizacji (np. 1405 = powiat grodziski)
 makeAPRSStatus(data)
