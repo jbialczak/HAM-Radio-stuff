@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import os
 import requests
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 from datetime import datetime, timezone
-import xmltodict
+# import xmltodict
 import json
 from enum import Enum
 import locale
@@ -210,129 +210,137 @@ class E_Wojewodztwa(Enum):
     # 2479: "ŻORY",
 
 
-class Imgw:
-    def __init__(self, woj):
-        self.woj = woj
-        self.url = 'https://danepubliczne.imgw.pl/datastore'
-        self.litags = None
-        self.getData()
+# class Imgw:
+#     def __init__(self, woj):
+#         self.woj = woj
+#         self.url = 'https://danepubliczne.imgw.pl/datastore'
+#         self.litags = None
+#         self.getData()
+#
+#     def getData(self):
+#         """
+#         Get a list of files available for download
+#         """
+#         r = requests.post(
+#             url='{}/getFilesList'.format(self.url),
+#             data={"productType": "oper", "path": "/Oper/ost_meteo/wojew"}
+#         )
+#         d = r.text
+#         soup = BeautifulSoup(d, "lxml")     # Parse the html content
+#         self.litags = soup.find_all("a")          # Find all li tag
+#
+#     def getXmlFile(self, url):
+#         r = requests.get(url='https://danepubliczne.imgw.pl/datastore/getfiledown/Oper/ost_meteo/wojew/{}'.format(url))
+#         d = r.text
+#         d = xmltodict.parse(d)
+#         teryt = []
+#         if type(d['Forecast']['WARNINGS']['WARNING']) == list:
+#             for r in d['Forecast']['WARNINGS']['WARNING']:
+#                 if 'Object' in r:
+#                     for x in r['Object']['Counties']['County']:
+#                         teryt.append({'cn': x['CountyName'].upper(), 'cc': x['CountyTerytCode']})
+#         elif type(d['Forecast']['WARNINGS']['WARNING']) == dict:
+#             for x in d['Forecast']['WARNINGS']['WARNING']['Object']['Counties']['County']:
+#                 teryt.append({'cn': x['CountyName'].upper(), 'cc': x['CountyTerytCode']})
+#         return teryt
+#
+#     def stan(self):
+#         """
+#         Ostrzeżenia meteorologiczne zbiorczo dla województwa
+#         Nie rozwijałem tego pliku XML, może są tam ciekawe dane do obrobienia
+#         Póki co drukuje listę TerytCodes dla ostrzerzeń w danym województwie
+#         """
+#         try:
+#             teryt = []
+#             for data in self.litags:
+#                 # Get text from each tag
+#                 fn = data.text[1:]
+#                 if fn[:8] == '{}W_STAN'.format(self.woj) and 'xml' in fn:
+#                     t = self.getXmlFile(fn)
+#                     for r in t:
+#                         write = True
+#                         for x in teryt:
+#                             if r['cc'] == x['cc']:
+#                                 write = False
+#                                 break
+#                         if write:
+#                             teryt.append(r)
+#         except Exception as e:
+#             print('Error: {}'.format(e))
+#         finally:
+#             teryt.sort(key=self.mySort)
+#             for x in teryt:
+#                 print('{}: "{}",'.format(x['cc'], x['cn']))
+#
+#     def mySort(self, e):
+#         return e['cc']
+#
+#     def getXmlWarning(self, url):
+#         """
+#         Parse the Xml warning document from the given url
+#         :param url: url of warning xml file
+#         :return: Dictionary with warning data
+#         """
+#         data = None
+#         r = requests.get(url='https://danepubliczne.imgw.pl/datastore/getfiledown/Oper/ost_meteo/wojew/{}'.format(url))
+#         d = r.text
+#         d = xmltodict.parse(d)
+#         if 'WARNING' in d['Forecast']:
+#             format = '%Y-%m-%d %H:%M:%S'
+#             if datetime.strptime(d['Forecast']['WARNING']['Object']['ValidTo'][:19], format) > datetime.now():
+#                 data = {
+#                     'Type': d['Forecast']['WARNING']['Object']['Type'],
+#                     'PhenomenonCode': d['Forecast']['WARNING']['Object']['PhenomenonCode'],
+#                     'Level': d['Forecast']['WARNING']['Object']['Level'],
+#                     'Probability': d['Forecast']['WARNING']['Object']['Probability'],
+#                     'WarningNumber': d['Forecast']['WARNING']['Object']['WarningNumber'],
+#                     'ReleaseDateTime': d['Forecast']['WARNING']['Object']['ReleaseDateTime'],
+#                     'ValidFrom': d['Forecast']['WARNING']['Object']['ValidFrom'],
+#                     'ValidTo': d['Forecast']['WARNING']['Object']['ValidTo'],
+#                     'Polish': d['Forecast']['WARNING']['Object']['Polish'],
+#                 }
+#             return data
+#
+#     def wrn(self, TerytCode):
+#         """
+#         Meteorological warnings for the district.
+#         Method downloads meteorological warnings from the IMGW public website
+#         and saves data to the meteowarnings.json file
+#         :param TerytCode: County Code, ex. for "grodziski" 1405, look in TERYT CODES comment
+#         """
+#         # Read current json file
+#         with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
+#             json_object = json.load(openfile)
+#             json_object['warnings'].clear()
+#
+#         # Read xml warnings from IMGW public server
+#         for data in self.litags:
+#             fn = data.text[1:]
+#             if fn[:8] == '{}W_{}'.format(self.woj, TerytCode) and 'xml' in fn:
+#                 w = self.getXmlWarning(fn)
+#                 if w is not None:
+#                     json_object['warnings'].append(w)
+#
+#         # Remove expired warnings
+#         format = '%Y-%m-%d %H:%M:%S'
+#         for r in json_object['warnings'][:]:
+#             if datetime.strptime(r['ValidTo'], format) < datetime.now():
+#                 json_object['warnings'].remove(r)
+#
+#         # Save result json file
+#         with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
+#             json.dump(json_object, outfile, indent=4, ensure_ascii=False)
+#
+#         # Return data
+#         return json_object
 
-    def getData(self):
-        """
-        Get a list of files available for download
-        """
-        r = requests.post(
-            url='{}/getFilesList'.format(self.url),
-            data={"productType": "oper", "path": "/Oper/ost_meteo/wojew"}
-        )
-        d = r.text
-        soup = BeautifulSoup(d, "lxml")     # Parse the html content
-        self.litags = soup.find_all("a")          # Find all li tag
 
-    def getXmlFile(self, url):
-        r = requests.get(url='https://danepubliczne.imgw.pl/datastore/getfiledown/Oper/ost_meteo/wojew/{}'.format(url))
-        d = r.text
-        d = xmltodict.parse(d)
-        teryt = []
-        if type(d['Forecast']['WARNINGS']['WARNING']) == list:
-            for r in d['Forecast']['WARNINGS']['WARNING']:
-                if 'Object' in r:
-                    for x in r['Object']['Counties']['County']:
-                        teryt.append({'cn': x['CountyName'].upper(), 'cc': x['CountyTerytCode']})
-        elif type(d['Forecast']['WARNINGS']['WARNING']) == dict:
-            for x in d['Forecast']['WARNINGS']['WARNING']['Object']['Counties']['County']:
-                teryt.append({'cn': x['CountyName'].upper(), 'cc': x['CountyTerytCode']})
-        return teryt
-
-    def stan(self):
-        """
-        Ostrzeżenia meteorologiczne zbiorczo dla województwa
-        Nie rozwijałem tego pliku XML, może są tam ciekawe dane do obrobienia
-        Póki co drukuje listę TerytCodes dla ostrzerzeń w danym województwie
-        """
-        try:
-            teryt = []
-            for data in self.litags:
-                # Get text from each tag
-                fn = data.text[1:]
-                if fn[:8] == '{}W_STAN'.format(self.woj) and 'xml' in fn:
-                    t = self.getXmlFile(fn)
-                    for r in t:
-                        write = True
-                        for x in teryt:
-                            if r['cc'] == x['cc']:
-                                write = False
-                                break
-                        if write:
-                            teryt.append(r)
-        except Exception as e:
-            print('Error: {}'.format(e))
-        finally:
-            teryt.sort(key=self.mySort)
-            for x in teryt:
-                print('{}: "{}",'.format(x['cc'], x['cn']))
-
-    def mySort(self, e):
-        return e['cc']
-
-    def getXmlWarning(self, url):
-        """
-        Parse the Xml warning document from the given url
-        :param url: url of warning xml file
-        :return: Dictionary with warning data
-        """
-        data = None
-        r = requests.get(url='https://danepubliczne.imgw.pl/datastore/getfiledown/Oper/ost_meteo/wojew/{}'.format(url))
-        d = r.text
-        d = xmltodict.parse(d)
-        if 'WARNING' in d['Forecast']:
-            format = '%Y-%m-%d %H:%M:%S'
-            if datetime.strptime(d['Forecast']['WARNING']['Object']['ValidTo'][:19], format) > datetime.now():
-                data = {
-                    'Type': d['Forecast']['WARNING']['Object']['Type'],
-                    'PhenomenonCode': d['Forecast']['WARNING']['Object']['PhenomenonCode'],
-                    'Level': d['Forecast']['WARNING']['Object']['Level'],
-                    'Probability': d['Forecast']['WARNING']['Object']['Probability'],
-                    'WarningNumber': d['Forecast']['WARNING']['Object']['WarningNumber'],
-                    'ReleaseDateTime': d['Forecast']['WARNING']['Object']['ReleaseDateTime'],
-                    'ValidFrom': d['Forecast']['WARNING']['Object']['ValidFrom'],
-                    'ValidTo': d['Forecast']['WARNING']['Object']['ValidTo'],
-                    'Polish': d['Forecast']['WARNING']['Object']['Polish'],
-                }
-            return data
-
-    def wrn(self, TerytCode):
-        """
-        Meteorological warnings for the district.
-        Method downloads meteorological warnings from the IMGW public website
-        and saves data to the meteowarnings.json file
-        :param TerytCode: County Code, ex. for "grodziski" 1405, look in TERYT CODES comment
-        """
-        # Read current json file
-        with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
-            json_object = json.load(openfile)
-            json_object['warnings'].clear()
-
-        # Read xml warnings from IMGW public server
-        for data in self.litags:
-            fn = data.text[1:]
-            if fn[:8] == '{}W_{}'.format(self.woj, TerytCode) and 'xml' in fn:
-                w = self.getXmlWarning(fn)
-                if w is not None:
-                    json_object['warnings'].append(w)
-
-        # Remove expired warnings
-        format = '%Y-%m-%d %H:%M:%S'
-        for r in json_object['warnings'][:]:
-            if datetime.strptime(r['ValidTo'], format) < datetime.now():
-                json_object['warnings'].remove(r)
-        
-        # Save result json file
-        with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
-            json.dump(json_object, outfile, indent=4, ensure_ascii=False)
-
-        # Return data
-        return json_object
+warning_levels = [
+    "BRAK OSTRZEZEN",
+    "ZOLTY ALARM",
+    "POMARANCZOWY ALARM",
+    'CZERWONY ALARM'
+]
 
 
 def teryt_osmet(terytCode: str):
@@ -340,7 +348,8 @@ def teryt_osmet(terytCode: str):
     with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
         json_object = json.load(openfile)
         json_object['warnings'].clear()
-
+        json_object['komets'].clear()
+    i = 0
     # Ostrzeżenia meteorologiczne
     r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/osmet-teryt?lc=')
     d = r.json()
@@ -351,14 +360,17 @@ def teryt_osmet(terytCode: str):
         if type(osmet_list) == list:
             for r in osmet_list:
                 if r in d['warnings']:
+                    d['warnings'][r]['type'] = 'WARNING'
                     d['warnings'][r]['WarningNumber'] = r
+                    d['warnings'][r]['index'] = i
+                    i += 1
                     json_object['warnings'].append(d['warnings'][r])
 
-        # Remove expired warnings
-        format = '%Y-%m-%d %H:%M'
-        for r in json_object['warnings'][:]:
-            if datetime.strptime(r['ValidTo'], format) < datetime.now():
-                json_object['warnings'].remove(r)
+        # # Remove expired warnings
+        # format = '%Y-%m-%d %H:%M'
+        # for r in json_object['warnings'][:]:
+        #     if datetime.strptime(r['ValidTo'], format) < datetime.now():
+        #         json_object['warnings'].remove(r)
 
     # Komunikaty meteorologiczne
     r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/komet-teryt?lc=')
@@ -370,8 +382,12 @@ def teryt_osmet(terytCode: str):
         if type(komet_list) == list:
             for r in komet_list:
                 if r in d['komets']:
+                    d['komets'][r]['type'] = 'KOMUNIKAT'
+                    d['komets'][r]['PhenomenonName'] = d['komets'][r]['Phenomenon'][0]['Name']
                     d['komets'][r]['WarningNumber'] = r
-                    json_object['komets'].append(d['komets'][r])
+                    d['komets'][r]['index'] = i
+                    i += 1
+                    json_object['warnings'].append(d['komets'][r])
 
         # Remove expired warnings
         format = '%Y-%m-%d %H:%M'
@@ -387,16 +403,6 @@ def teryt_osmet(terytCode: str):
     return json_object
 
 
-def teryt_komet(terytCode: str):
-    # Read current json file
-    with open('meteowarnings.json', 'r', encoding='utf-8') as openfile:
-        json_object = json.load(openfile)
-        json_object['komets'].clear()
-    r = requests.get(url='https://meteo.imgw.pl/api/meteo/messages/v1/osmet/latest/komet-teryt?lc=')
-    d = r.json()
-    if 'komets' not in d:
-        return json_object
-        
 def makeAPRSStatus(warnings):
     """
     Metoda wystawia dane do wysłania statusu APRS
@@ -415,18 +421,22 @@ def makeAPRSStatus(warnings):
             else:
                 okres = '{}.{} {}:{} - {}.{} {}:{}'.format(dt_from.day, roman.toRoman(dt_from.month), dt_from.hour, dt_from.strftime("%M"), dt.day, roman.toRoman(dt.month), dt.hour, dt.strftime("%M"))
             if len(warnings['warnings']) > 1:
-                if r['WarningNumber'] != lastalarm and dt > datetime.now():
+                if lastalarm is None: lastalarm = -1
+                if (r['index'] > int(lastalarm) or lastalarm is None) and dt > datetime.now() > dt_from:
                     msg = '{} {}'.format(r['PhenomenonName'], okres)
-                    msg = '>UWAGA: {}'.format(msg)
-                    lastalarm = r['WarningNumber']
+                    if r['type'] == 'WARNING':
+                        msg = '>{} {}'.format(warning_levels[int(r['Level'])], msg)
+                    elif r['type'] == 'KOMUNIKAT':
+                        msg = '>KOMUNIKAT METEO: {}'.format(msg)
+                    lastalarm = r['index']
                     break
             else:
-                if dt > datetime.now():
+                if dt > datetime.now() > dt_from:
                     msg = '{} {}'.format(r['PhenomenonName'], okres)
-                    msg = '>UWAGA: {}'.format(msg)
-                    lastalarm = r['WarningNumber']
+                    msg = '>{} {}'.format(warning_levels[int(r['Level'])], msg)
+                    lastalarm = r['index']
                     break
-        warnings['LastAlarm'] = lastalarm
+        warnings['LastAlarm'] = lastalarm if len(warnings) - 1 >= lastalarm else None
     elif lastalarm is not None:
         msg = '>'
         warnings['LastAlarm'] = None
@@ -440,7 +450,7 @@ def makeAPRSStatus(warnings):
 
 if not os.path.exists("meteowarnings.json"):
     with open("meteowarnings.json", "w", encoding='utf-8') as outfile:
-        json.dump({'LastAlarm': None, 'warnings': [], }, outfile, indent=4, ensure_ascii=False)
+        json.dump({'LastAlarm': None, 'warnings': [], 'komets': []}, outfile, indent=4, ensure_ascii=False)
 
 
 # Stara metoda pobierania ostrzeżeń meteorologicznych        
